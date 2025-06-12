@@ -5,34 +5,36 @@ import dotenv from "dotenv";
 import rateLimiter from "./middleware/rateLimiter.js";
 import cors from "cors";
 import path from "path";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+// Required to use __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 const app = express();
 
-if (false) {
-  app.use(
-    cors({
-      origin: "http://localhost:5173", // Allow requests from this origin
-    })
-  ); // Enable CORS for all routes
-}
+// Enable CORS (optional, depending on how you're testing)
+app.use(
+  cors({
+    origin: "*", // Or set specific origin
+  })
+);
 
 app.use(express.json()); // Middleware to parse JSON bodies
 app.use(rateLimiter); // Apply rate limiting middleware
-
 app.use("/api/notes", notesRoutes);
 
-const mongoURI = process.env.MONGO_URI;
-console.log("mongoURI : ");
-console.log(mongoURI);
+// Serve frontend static files
+const frontendDistPath = join(__dirname, "../../frontend/dist");
+app.use(express.static(frontendDistPath));
 
-if (true) {
-  app.use(express.static(path.join(path.resolve(), "../frontend/dist"))); // Serve static files from the frontend build directory
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(path.resolve(), "../frontend/dist", "index.html"));
-  });
-}
+app.get("*", (req, res) => {
+  res.sendFile(join(frontendDistPath, "index.html"));
+});
 
+// Start server after DB connection
 connectDB().then(() => {
   app.listen(5000, () => {
     console.log("Server is running on port 5000");
